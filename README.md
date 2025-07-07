@@ -119,16 +119,33 @@ cd CodeZilla-LearningSite
 ```ini
 OPENROUTER_API_KEY="your_api_key_here"
 ```
-### 🗃️ 3. Setup Database
+### 🔑 3. Create an app password to enable automatic email sending via SMTP.
+- Go to https://myaccount.google.com/security.
+
+- Under "Signing in to Google", enable 2-Step Verification.
+
+- Once enabled, click on App passwords.
+
+- Select Mail as the app and Other, name it e.g. “Django”.
+
+- Click Generate to get a 16-character app password.
+
+- Copy and use it as EMAIL_HOST_PASSWORD in the settings.py file inside the MySite folder.
+
+```python
+EMAIL_HOST_USER = 'your_email@gmail.com'
+EMAIL_HOST_PASSWORD = 'your_app_password'
+```
+### 🗃️ 4. Setup Database
 ```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
-### 👤 4. Create Admin User
+### 👤 5. Create Admin User
 ```bash
 python manage.py createsuperuser
 ```
-### ▶️ 5. Run the Web Application
+### ▶️ 6. Run the Web Application
 - Make sure Docker Desktop is running
 
 - Start the server:

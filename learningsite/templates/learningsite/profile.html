@@ -1,0 +1,17 @@
+{% extends "learningsite/layout.html" %}
+
+{% block body %}
+    <div class="profile-card">
+        <h2>Thông tin cá nhân</h2>
+        <ul class="profile-info-list">
+            <li>Họ tên: {{user.first_name}} {{user.last_name}}</li>
+            <li>Username: {{user.username}}</li>
+            <li>Email: {{user.email}}</li>
+        </ul>
+        <div class="profile-btns">
+            <a href="{% url 'home' %}" class="text-primary fw-bold" style="font-size:1.3rem; text-decoration:underline;">
+                <i class="bi bi-arrow-left-circle me-1"></i> Trang chủ
+            </a>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "learningsite/layout.html" %}
+{% load static %}
+{% block body %}
+    
+    
+    <p class="text-muted mb-4" style="font-size:1.1rem;">
+        Chào mừng bạn đến với CodeZilla! Nền tảng học lập trình trực tuyến dành cho học sinh.
+        <br>Hãy chọn một chủ đề để bắt đầu học nhé.
+    </p>
+    <!--thanh tìm kiếm-->
+    <form method="get" class="mb-4">
+        <div class="input-group input-group-lg">
+            <!--value trong input là truyền lại từ khóa vừa nhập để hiển thị lại trên ô tìm kiếm-->
+            <input type="text" name="q" class="form-control" placeholder="Tìm kiếm khóa học" value="{{ query|default:''}}">
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-search"></i> Tìm kiếm            
+            </button>
+        </div>
+    </form>
+    <!--nếu người dùng tìm kiếm khóa học thì tìm xong sẽ có nút về lại trang chủ-->
+    {% if query %}
+        <div class="mb-4 text-start">
+            <a href="{% url 'home' %}" class="btn btn-gradient fw-bold px-4 py-2 shadow-sm" style="font-size:1.1rem; border-radius:2rem;">
+                <i class="bi bi-arrow-left-circle me-2"></i> Về trang chủ
+            </a>
+        </div>
+    {% endif %}
+    
+    <!-- danh sách các category trên trang chủ -->
+    <div class="row justify-content-start">
+        {% for category in categories %}
+            <div class="col-lg-4 col-md-6 mb-5">
+                <div class="card category-card shadow-lg h-100" style="min-height: 420px;">
+                    <div class="card-body d-flex flex-column justify-content-between align-items-center">
+                        {% if category.image %}
+                            <img src="{{ category.image.url }}" alt="{{ category.name }}" class="mb-3" style="width:100%;max-width:380px;border-radius:16px;">
+                        {% else %}
+                            <i class="bi bi-journal-code" style="font-size: 3rem; color: #0d6efd; margin-bottom: 16px;"></i>
+                        {% endif %}
+                        <h4 class="card-title mt-2 mb-2">{{ category.name }}</h4>
+                        <p class="text-secondary text-center" style="min-height:48px;">
+                            {{ category.description|default:"Chưa có mô tả cho chủ đề này." }}
+                        </p>
+                        <p class="card-text">
+                            Trạng thái:
+                            <span class="badge {% if category.status == 'published' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ category.status }}
+                            </span>
+                        </p>
+                        <a href="{% url 'category' category.slug %}" class="btn btn-primary mt-auto w-100" style="font-size:1.1rem;">Xem danh mục</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center">
+                <div class="alert alert-warning">No Category</div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

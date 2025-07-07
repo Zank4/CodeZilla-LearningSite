@@ -1,0 +1,74 @@
+{% extends "learningsite/layout.html" %}
+
+{% block body %}
+
+    <div class="mb-4 d-flex align-items-center">
+  
+        <h2 class="mb-0 fw-bold text-gradient-blue" style="font-size:2.3rem; letter-spacing:1px;">
+            {{ category.name }}
+        </h2>
+    </div>
+    <!--hiển thị % hoàn thành cho category này, nếu ng dùng đã đnhap và đã hoàn thành ít nhất 1 bài (percent not None)-->
+    {% if user.is_authenticated and percent is not None %}
+        <div class="mb-3">
+            <span class="badge bg-success fs-5">
+                <i class="bi bi-check-circle"></i> Đã hoàn thành: {{ percent }}%
+            </span>
+        </div>
+    {% endif %} 
+
+    {% if category.layout == "grid" %}
+        <div class="row">
+            {% for lesson in lessons %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm border-0 lesson-card">
+                        <div class="card-body d-flex flex-column">
+                            <div class="mb-3 text-center">
+                                <i class="bi bi-journal-code text-primary" style="font-size:2.5rem;"></i>
+                                {% if lesson.id in completed_ids %}
+                                    <i class="bi bi-check-circle-fill text-success ms-2" title="Đã hoàn thành"></i>
+                                {% endif %}
+                            </div>
+                            <h5 class="card-title text-center mb-2">{{ lesson.name }}</h5>
+                            <p class="card-text text-secondary text-center" style="min-height:40px;">
+                       
+                            </p>
+                            <a href="{% url 'lesson' category.slug lesson.slug %}" class="btn btn-outline-primary mt-auto w-100">
+                                <i class="bi bi-arrow-right-circle"></i> Xem bài học
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center text-muted">Chưa có bài học</div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <ul class="list-group mb-4 shadow-sm">
+            {% for lesson in lessons %}
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <i class="bi bi-journal-code text-primary me-2"></i>
+                        <a href="{% url 'lesson' category.slug lesson.slug %}" class="text-decoration-none fw-semibold">{{ lesson.name }}</a>
+                        {% if lesson.id in completed_ids %}
+                            <i class="bi bi-check-circle-fill text-success ms-2" title="Đã hoàn thành"></i>
+                            <span class="badge bg-success ms-2">Đã hoàn thành</span>
+                        {% endif %}
+                    </div>
+                    <a href="{% url 'lesson' category.slug lesson.slug %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </li>
+            {% empty %}
+                <li class="list-group-item text-muted text-center">Chưa có bài học</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <div class="d-flex justify-content-end mt-4">
+        <a href="{% url 'home' %}" class="btn btn-lg btn-gradient fw-bold px-4 py-2 shadow-sm" style="font-size:1.15rem;">
+            <i class="bi bi-house-door-fill me-2"></i> Về trang chủ
+        </a>
+    </div>
+    
+{% endblock %}

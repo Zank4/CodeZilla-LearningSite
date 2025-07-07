@@ -1,0 +1,80 @@
+{% extends "learningsite/layout.html" %}
+{% load static %}
+
+{% block body %}
+
+<section class="vh-100" style="background-color: linear-gradient(120deg, #f0f4ff 0%, #e0e7ff 100%);">
+  <div class="container h-100">
+    <div class="row d-flex justify-content-center align-items-center h-100">
+      <div class="col-lg-12 col-xl-11">
+        <div class="card text-black" style="border-radius: 25px;">
+          <div class="card-body p-md-5">
+            <div class="row justify-content-center">
+              <div class="col-md-10 col-lg-6 col-xl-5 order-2 order-lg-1">
+
+                <p class="text-gradient text-center h1 fw-bold mb-5 mx-1 mx-md-4 mt-4">Login</p>
+                {% if messages %}
+                <div class="mb-3">
+                    {% for message in messages %}
+                    <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} text-center fw-bold" role="alert">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <form class="mx-1 mx-md-4" method="post" action="">
+                {% csrf_token %}
+
+                    {% if next %} <!--thêm trường ẩn để nếu có giá trị next (user chưa đnhap truy cập bài học sẽ chuyển qua trang đăng nhập, 
+                    sẽ lưu biến next=url bài học đó để đnhap xong trở lại đúng bài học đó), thêm ô ẩn này để khi user submit form đnhap thì gửi cả giá trị next đi-->
+                    <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
+
+                  <div class="d-flex flex-row align-items-center mb-4">
+                    <i class="fas fa-user fa-lg me-3 fa-fw"></i>
+                    <div data-mdb-input-init class="form-outline flex-fill mb-0">
+                        <input type="text" name="username" id="form3Example1c" class="form-control" placeholder="Username" />
+                    </div>
+                  </div>
+
+                  <div class="d-flex flex-row align-items-center mb-4">
+                    <i class="fas fa-lock fa-lg me-3 fa-fw"></i>
+                    <div data-mdb-input-init class="form-outline flex-fill mb-0">
+                      <input type="password" name="password" id="form3Example4c" class="form-control" placeholder="Password" />
+                    </div>
+                  </div>
+
+                  <div class="d-flex justify-content-between gap-4 mx-4 mb-3 mb-lg-4">
+                    <button  type="submit" data-mdb-button-init data-mdb-ripple-init class="btn btn-primary btn-lg">Login</button>
+                    <a href="{% url 'home' %}" class="btn btn-lg btn-gradient fw-bold px-4 py-2 shadow-sm" style="font-size:1.15rem;">
+                        <i class="bi bi-house-door-fill me-2"></i> Trang chủ
+                    </a>
+                  </div>
+                <p class="text-primary text-center h5 fw-bold mb-5 mx-1 mx-md-4 mt-4">
+                    Bạn chưa có tài khoản?
+                    <a href="{% url 'register' %}" class="fw-bold text-primary ms-2" style="text-decoration: underline;">Đăng ký</a>
+                </p>
+                
+                <p class="text-center mt-3">
+                    <a href="{% url 'password_reset' %}" class="text-decoration-underline text-primary fw-bold">Quên mật khẩu?</a>
+                </p>
+                </form>
+
+              </div>
+              <div class="col-md-10 col-lg-6 col-xl-7 d-flex align-items-center order-1 order-lg-2">
+
+                <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-registration/draw1.webp"
+                  class="img-fluid" alt="Sample image">
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+    
+   
+{% endblock %}

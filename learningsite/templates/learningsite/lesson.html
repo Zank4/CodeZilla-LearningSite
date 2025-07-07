@@ -1,0 +1,346 @@
+{% extends "learningsite/layout.html" %}
+
+{% block body %}
+<div class="container-lg">
+    <!--Thêm thư viện codemirror tạo khung soạn code đẹp, hỗ trợ python, ajax giúp chạy code mà không load lại trang-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+
+    <!-- Thanh điều hướng cố định -->
+    <div class="sticky-nav shadow-sm bg-white rounded-3 px-3 py-2 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            {% if prev_lesson %}
+                <a href="{% url 'lesson' category.slug prev_lesson.slug %}" class="btn btn-gradient fw-bold me-2">
+                    <i class="bi bi-arrow-left-circle me-1"></i> Bài trước
+                </a>
+            {% else %}
+                <button class="btn btn-gradient fw-bold me-2" disabled>
+                    <i class="bi bi-arrow-left-circle me-1"></i> Bài trước
+                </button>
+            {% endif %}
+            {% if next_lesson %}
+                <a href="{% url 'lesson' category.slug next_lesson.slug %}" class="btn btn-gradient fw-bold">
+                    Bài sau <i class="bi bi-arrow-right-circle ms-1"></i>
+                </a>
+            {% else %}
+                <button class="btn btn-gradient fw-bold" disabled>
+                    Bài sau <i class="bi bi-arrow-right-circle ms-1"></i>
+                </button>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'category' category.slug %}" class="btn btn-gradient fw-bold">
+                <i class="bi bi-journal-code me-1"></i> {{ category.name }}
+            </a>
+            <a href="{% url 'home' %}" class="btn btn-gradient fw-bold">
+                <i class="bi bi-house-door-fill me-1"></i> Trang chủ
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <h2 class="card-title text-gradient fw-bold mb-3" style="font-size:2rem;">{{ lesson.name }}</h2>
+            <div>
+                <!-- Hiển thị nội dung bài học -->
+                {{ lesson.content|safe }}
+                {% if lesson.lesson_type == 'theory' %}
+                    <button id="mark-completed-btn" class="btn btn-success mt-3">Click vào đây khi bạn đã đọc xong bài lý thuyết này</button>
+                    <script>
+                    document.getElementById("mark-completed-btn").onclick = function() {
+                        fetch("{% url 'mark_lesson_completed' lesson.category.slug lesson.slug %}", {
+                            method: "POST",
+                            headers: {
+                                "X-CSRFToken": csrftoken
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if(data.success) {
+                                document.getElementById("mark-completed-btn").innerText = "Đã đánh dấu hoàn thành!";
+                                document.getElementById("mark-completed-btn").disabled = true;
+                            }
+                        });
+                    }
+                    </script>
+                {% endif %}
+                <!-- Tạo khung để người dùng nhập code Python-->
+                <div class="mb-3 mt-4">
+                    <label for="code-editor" class="form-label fw-bold">Online CodeZilla Editor (bạn có thể code tại đây):</label>
+                    <textarea id="code-editor" name="code" rows="8" class="form-control"></textarea>
+                </div>
+
+                <!-- Tạo khung để người dùng nhập dữ liệu đầu vào -->
+                <div class="mb-3">
+                    <label for="input-data" class="form-label fw-bold">Input(nếu có):</label>
+                    <textarea id="input-data" name="input" rows="3" class="form-control" placeholder="Mỗi dòng là một input()"></textarea>
+                </div>
+
+                <!-- Nút Run -->
+                <button id="run-code-btn" class="btn btn-success fw-bold mb-3">Run</button>
+                <!--kiểm tra lesson này là lý thuyết hay bài tập, nếu là bài tập mới hiển thị nút submit-->
+                {% if testcases and testcases|length > 0 %} 
+                    <!--nút Submit-->
+                    <button id="submit-code-btn" class="btn btn-primary fw-bold mb-3">Submit</button>
+                    <!--hiển thị kết quả khi submit bài tập ở đây-->
+                    <pre id="submit-result" class="bg-light p-2 rounded"></pre> 
+                {% endif %}
+                <!-- Kết quả sẽ hiển thị Run code ở đây -->
+                <pre id="output" class="bg-light p-2 rounded"></pre>
+
+                <script>
+                    // lấy csrf token từ cookie
+                    function getCookie(name){
+                        let cookieValue = null;
+                        if (document.cookie && document.cookie !== ''){
+                            const cookies = document.cookie.split(';');
+                            for (let i = 0; i<cookies.length; i++){
+                                const cookie = cookies[i].trim();
+                                if (cookie.substring(0, name.length + 1) === (name + '=')){
+                                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1))
+                                    break;
+                                }
+                            }
+                        }
+                        return cookieValue;
+                    }
+                    const csrftoken = getCookie('csrftoken');
+
+
+                    // Khởi tạo CodeMirror cho textarea
+                    var editor = CodeMirror.fromTextArea(document.getElementById("code-editor"), {
+                        lineNumbers: true,
+                        mode: "python",
+                        theme: "default",
+                    });
+
+                    // Xử lý khi bấm nút "Run"
+                    document.getElementById("run-code-btn").onclick = function() {
+                        var code = editor.getValue(); // Lấy code người dùng từ CodeMirror
+                        let inputData = document.getElementById("input-data").value; // Lấy dữ liệu đầu vào
+
+                        document.getElementById("output").textContent = "running...";
+
+                        // Bước tiếp theo sẽ gửi code này lên server để chạy thực tế
+                        fetch( "{% url 'run_code' %}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/x-www-form-urlencoded",
+                                "X-CSRFToken": csrftoken
+                            },
+                            body: "code=" + encodeURIComponent(code) + "&input=" + encodeURIComponent(inputData)
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById("output").textContent = data.output;
+                        })
+                        .catch(error => {
+                            document.getElementById("output").textContent = "Lỗi: " + error;
+                        });
+                        
+                    }
+                </script>
+
+                <!--Xử lý khi bấm nút "Submit code", nếu là bài tập(có nút submit thì mới chạy script này) -->
+                {% if testcases and testcases|length > 0  %} 
+                    <script>
+                    document.getElementById("submit-code-btn").onclick = function(){
+                        var code = editor.getValue() // Lấy code người dùng từ CodeMirror
+                        document.getElementById("submit-result").textContent = "Please wait...";
+                        fetch("{% url 'check_lesson' lesson.category.slug lesson.slug %}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/x-www-form-urlencoded",
+                                "X-CSRFToken": csrftoken
+                            },
+                            body: "code=" + encodeURIComponent(code)
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById("submit-result").innerHTML = data.result;
+                        })
+                        .catch(error => {
+                            document.getElementById("submit-result").textContent = "Lỗi: " + error;
+                        });
+                    }
+                    </script>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Phần icon khung chat hỏi AI, khi click vào icon sẽ hiện lên khung chat -->
+<!-- Icon AI -->
+<div id="ai-chat-icon" title="Hỏi AI">
+    <i class="bi bi-robot"></i>
+</div>
+
+<!-- Khung chat AI ẩn/hiện với giao diện tin nhắn -->
+<div id="ai-chat-box">
+    <div id="ai-chat-box-header">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-robot me-2"></i>
+            <span>Trợ lý AI</span>
+        </div>
+        <span id="ai-chat-close">&times;</span> <!-- Nút đóng khung chat -->
+    </div>
+    
+    <!-- Khu vực hiển thị tin nhắn -->
+    <div id="ai-chat-messages" class="ai-chat-messages">
+        <div class="ai-message">
+            <div class="ai-avatar">
+                <i class="bi bi-robot"></i>
+            </div>
+            <div class="message-bubble ai-bubble">
+                Xin chào! Tôi có thể giúp bạn gì về lập trình hôm nay?
+            </div>
+        </div>
+    </div>
+    
+    <!-- Khu vực nhập tin nhắn -->
+    <div class="ai-chat-input">
+        <div class="input-group">
+            <textarea id="ai-question" class="form-control" rows="1" placeholder="Nhập câu hỏi của bạn..."></textarea>
+            <button id="ask-ai-btn" class="btn btn-primary" type="button">
+                <i class="bi bi-send"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Biến lưu trữ lịch sử chat
+let chatHistory = [];
+
+// Hàm auto-resize textarea
+function autoResizeTextarea(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 80) + 'px';
+}
+
+// Hàm thêm tin nhắn vào chat
+function addMessage(content, isUser = false) { //nhận vào nội dung tin nhắn, isUser mặc định false là AI, nếu true thì là tin nhắn của user
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = isUser ? 'user-message' : 'ai-message'; // kiểm tra nếu là user thì class là user-message, nếu là AI thì class là ai-message, sẽ có các css tương ứng xử lí
+    
+    messageDiv.innerHTML = ` 
+        <div class="${isUser ? 'user-avatar' : 'ai-avatar'}">
+            <i class="bi bi-${isUser ? 'person-fill' : 'robot'}"></i>
+        </div>
+        <div class="message-bubble ${isUser ? 'user-bubble' : 'ai-bubble'}">
+            ${content}
+        </div>
+    `; // Tạo cấu trúc HTML cho tin nhắn, kiểm tra nếu là user thì hiện avatar người dùng, nếu là AI thì hiện avatar AI cùng các css tương ứng
+    
+    messagesContainer.appendChild(messageDiv); //gắn tin nhắn vào khung chat
+    messagesContainer.scrollTop = messagesContainer.scrollHeight; //tự động cuộn xuống cuối cùng của khung chat khi có tin nhắn mới
+    
+    // Lưu vào lịch sử để hiển thị lại khi reload, có thể dùng để gửi lại khi cần
+    chatHistory.push({
+        content: content,
+        isUser: isUser,
+        timestamp: new Date()
+    });
+}
+
+// Hàm hiển thị typing indicator(dấu 3 chấm với animation khi đợi AI trả lời)
+function showTypingIndicator() {
+    const messagesContainer = document.getElementById('ai-chat-messages');
+    
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'ai-message';
+    typingDiv.id = 'typing-indicator';
+    
+    typingDiv.innerHTML = `
+        <div class="ai-avatar">
+            <i class="bi bi-robot"></i>
+        </div>
+        <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Hàm ẩn typing indicator (Sau khi AI trả lời thì ẩn hiệu ứng này đi)
+function hideTypingIndicator() {
+    const typingIndicator = document.getElementById('typing-indicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+}
+
+// Xử lý sự kiện mở/đóng chat
+document.getElementById("ai-chat-icon").onclick = function() {
+    document.getElementById("ai-chat-box").style.display = "flex";
+}
+
+document.getElementById("ai-chat-close").onclick = function() {
+    document.getElementById("ai-chat-box").style.display = "none";
+}
+
+// Auto-resize textarea khi người dùng gõ
+document.getElementById("ai-question").addEventListener('input', function() {
+    autoResizeTextarea(this);
+});
+
+// Xử lý gửi tin nhắn bằng Enter (Shift+Enter để xuống dòng)
+document.getElementById("ai-question").addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { // Nếu nhấn Enter mà không giữ Shift
+        e.preventDefault(); // Ngăn chặn hành vi mặc định của Enter là xuống dòng thay vào đó là gửi câu hỏi, ngược lại giữ shift+enter thì xuống dòng
+        document.getElementById("ask-ai-btn").click(); // gửi câu hỏi
+    }
+});
+
+// Xử lý gửi câu hỏi cho AI
+document.getElementById("ask-ai-btn").onclick = function() {
+    const questionInput = document.getElementById("ai-question");
+    const question = questionInput.value.trim(); // Lấy nội dung câu hỏi và loại bỏ khoảng trắng đầu cuối
+    
+    if (!question) return; // Nếu không có câu hỏi thì không làm gì cả
+    
+    // Thêm, hiển thị tin nhắn của người dùng vào giao diện chat
+    addMessage(question, true); //isUser truyền vào là true cho biết đây là tin nhắn của user
+    
+    // Xóa nội dung input và reset height
+    questionInput.value = ''; //xóa nội dung input mà người dùng đã nhập
+    autoResizeTextarea(questionInput); // tự động điều chỉnh chiều cao của textarea về mặc định
+    
+    // Hiển thị typing indicator
+    showTypingIndicator();
+    
+    // Lấy code hiện tại
+    const code = editor.getValue();
+    
+    // Gửi request đến server
+    fetch("{% url 'ask_ai' lesson.category.slug lesson.slug %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded", // định dạng dữ liệu gửi đi dạng key=value
+            "X-CSRFToken": csrftoken // thêm CSRF token để bảo mật
+        },
+        body: "question=" + encodeURIComponent(question) + "&code=" + encodeURIComponent(code)
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideTypingIndicator(); // Ẩn typing indicator sau khi nhận được phản hồi từ AI
+        // Thêm phản hồi của AI vào giao diện chat, thay ký tự xuống dòng \n bằng thẻ <br> để hiển thị đúng định dạng HTML
+        addMessage(data.answer.replace(/\n/g, '<br>'), false);
+    })
+    .catch(error => {
+        hideTypingIndicator();
+        addMessage("Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.", false);
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endblock %}

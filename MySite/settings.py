@@ -136,5 +136,5 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'codezillakma@gmail.com'         # Gmail dùng để gửi cho user khi reset mật khẩu
-EMAIL_HOST_PASSWORD = 'yton tefc klnk rdjv'        # App password (không phải mật khẩu Gmail thông thường)
+EMAIL_HOST_PASSWORD = ''  #(đã xóa) Mật khẩu ứng dụng (App password) – tạo từ tài khoản Google tại https://myaccount.google.com/apppasswords sau khi bật xác minh 2 bước (2FA)
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
